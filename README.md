@@ -26,6 +26,17 @@ An OS-level automation tool engineered to fix cluttered workspaces (like the `Do
 * **Zero-Interference Guard:** Automatically skips system files and its own running script to ensure data safety.
 
 ---
+---
+
+## 📈 Project 3: Executive Sales Data Merger & Analyzer
+A financial data analysis script engineered for business owners managing multiple retail branches or storefronts.
+
+### ✨ Key Features:
+* **Multi-Source Consolidation:** Automatically merges disconnected sales reports into a unified master database using `pandas`.
+* **Automated Aggregation:** Deduplicates item inventories and computes total units sold and net revenue dynamically via automated grouping.
+* **Financial Styling & Guardrails:** Styles final spreadsheets using corporate Emerald Green highlights, proper text alignments, number delimiters, and automated currency formatting (`$0.00`).
+
+📁 **Output File Sample Included:** Check `executive_sales_summary.xlsx` above to see the fully automated, corporate-ready summary.
 
 ## 💼 Hire Me / Contact
 Looking for a fast, clean, and customized script for your business? I can help you with:
