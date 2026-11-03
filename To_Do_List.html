@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>To Do List</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: sans-serif;
+        background: #f0f2f5;
+        display: flex;
+        justify-content: center;
+        padding: 60px 12px 20px;
+        margin: 0;
+      }
+      .box {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 320px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        margin-top: 0;
+        text-align: center;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+      button {
+        padding: 8px 12px;
+        border: none;
+        background: #4a7cf0;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+      }
+      li {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+      }
+      li .left {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        flex: 1;
+        min-width: 0;
+      }
+      li .text {
+        flex: 1;
+        min-width: 0;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+      }
+      li.done .text {
+        text-decoration: line-through;
+        color: #999;
+      }
+      li .edit-input {
+        width: 100%;
+      }
+      li .btns {
+        display: flex;
+        gap: 4px;
+      }
+      li button {
+        padding: 2px 8px;
+      }
+      li button.del {
+        background: #e55;
+      }
+      li button.edit {
+        background: #888;
+      }
+      .empty {
+        text-align: center;
+        color: #999;
+      }
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 10px 14px;
+        border-radius: 8px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        font-size: 14px;
+      }
+      .toast[hidden] {
+        display: none;
+      }
+      .toast button {
+        background: none;
+        padding: 0;
+        color: #8fb2ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="box">
+      <h1>My Tasks</h1>
+      <div class="row">
+        <input
+          id="taskInput"
+          type="text"
+          dir="auto"
+          aria-label="New task"
+          placeholder="Add a task..."
+        />
+        <button id="addBTN">Add</button>
+      </div>
+      <ul id="list"></ul>
+    </main>
+    <div class="toast" id="toast" hidden>
+      <span>Task deleted</span>
+      <button id="toastUndo" type="button">Undo</button>
+    </div>
+    <script>
+      const KEY = "todoList.tasks";
+      const input = document.getElementById("taskInput");
+      const list = document.getElementById("list");
+      const addBTN = document.getElementById("addBTN");
+      const toastEl = document.getElementById("toast");
+
+      function loadTasks() {
+        let raw = null;
+        try {
+          raw = localStorage.getItem(KEY) || localStorage.getItem("tasks");
+        } catch (e) {}
+        try {
+          const data = JSON.parse(raw || "[]");
+          if (!Array.isArray(data)) return [];
+          return data
+            .filter((t) => t && typeof t.text === "string")
+            .map((t, i) => ({
+              id: t.id || Date.now() + i,
+              text: t.text,
+              done: !!t.done,
+            }));
+        } catch (e) {
+          return [];
+        }
+      }
+
+      let tasks = loadTasks();
+      let editingId = null;
+      let toastTimer = null;
+
+      function save() {
+        try {
+          localStorage.setItem(KEY, JSON.stringify(tasks));
+        } catch (e) {}
+      }
+
+      function toggle(task) {
+        task.done = !task.done;
+        save();
+        render();
+      }
+
+      function showUndo(removed, index) {
+        toastEl.hidden = false;
+        document.getElementById("toastUndo").onclick = () => {
+          tasks.splice(Math.min(index, tasks.length), 0, removed);
+          save();
+          render();
+          toastEl.hidden = true;
+          clearTimeout(toastTimer);
+        };
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastEl.hidden = true;
+        }, 5000);
+      }
+
+      function startEdit(task, textEl) {
+        editingId = task.id;
+        const field = document.createElement("input");
+        field.type = "text";
+        field.className = "edit-input";
+        field.dir = "auto";
+        field.value = task.text;
+        textEl.replaceWith(field);
+        field.focus();
+        field.select();
+        let finished = false;
+        function finish(saveIt) {
+          if (finished) return;
+          finished = true;
+          editingId = null;
+          const value = field.value.trim();
+          if (saveIt && value) {
+            task.text = value;
+            save();
+          }
+          render();
+        }
+        field.addEventListener("keydown", (e) => {
+          if (e.isComposing) return;
+          if (e.key === "Enter") finish(true);
+          if (e.key === "Escape") finish(false);
+        });
+        field.addEventListener("blur", () => finish(true));
+      }
+
+      function render() {
+        list.innerHTML = "";
+        if (!tasks.length) {
+          const li = document.createElement("li");
+          li.className = "empty";
+          li.style.justifyContent = "center";
+          li.textContent = "No tasks yet";
+          list.appendChild(li);
+          return;
+        }
+        tasks.forEach((task) => {
+          const li = document.createElement("li");
+          if (task.done) li.classList.add("done");
+
+          const left = document.createElement("div");
+          left.className = "left";
+          const check = document.createElement("input");
+          check.type = "checkbox";
+          check.checked = task.done;
+          check.setAttribute("aria-label", "Mark as done");
+          check.addEventListener("change", () => toggle(task));
+          const span = document.createElement("span");
+          span.className = "text";
+          span.dir = "auto";
+          span.textContent = task.text;
+          span.addEventListener("click", () => toggle(task));
+          left.appendChild(check);
+          left.appendChild(span);
+
+          const btns = document.createElement("div");
+          btns.className = "btns";
+          const edit = document.createElement("button");
+          edit.className = "edit";
+          edit.type = "button";
+          edit.textContent = "\u270e";
+          edit.setAttribute("aria-label", "Edit task");
+          edit.addEventListener("click", () => startEdit(task, span));
+          const del = document.createElement("button");
+          del.className = "del";
+          del.type = "button";
+          del.textContent = "x";
+          del.setAttribute("aria-label", "Delete task");
+          del.addEventListener("click", () => {
+            const index = tasks.findIndex((t) => t.id === task.id);
+            if (index === -1) return;
+            const removed = tasks.splice(index, 1)[0];
+            save();
+            render();
+            showUndo(removed, index);
+          });
+          btns.appendChild(edit);
+          btns.appendChild(del);
+
+          li.appendChild(left);
+          li.appendChild(btns);
+          list.appendChild(li);
+        });
+      }
+
+      function addTask() {
+        const text = input.value.trim();
+        if (!text) return;
+        tasks.push({ id: Date.now(), text: text, done: false });
+        save();
+        render();
+        input.value = "";
+      }
+      addBTN.addEventListener("click", addTask);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.isComposing) addTask();
+      });
+      render();
+    </script>
+  </body>
+</html>

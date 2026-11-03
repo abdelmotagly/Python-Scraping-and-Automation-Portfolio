@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>وقت التركيز</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: sans-serif;
+        background: #f0f2f5;
+        display: flex;
+        justify-content: center;
+        padding: 40px 12px;
+        margin: 0;
+        transition: background 0.4s;
+      }
+      body.break {
+        background: #e3f6e8;
+      }
+      .app {
+        background: white;
+        padding: 28px;
+        border-radius: 14px;
+        width: 100%;
+        max-width: 360px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .modes {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        margin-bottom: 18px;
+      }
+      .modes button {
+        padding: 7px 12px;
+        border: 1px solid #ccc;
+        background: white;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .modes button.active {
+        background: #4a7cf0;
+        color: white;
+        border-color: #4a7cf0;
+      }
+      .ring {
+        position: relative;
+        width: 220px;
+        height: 220px;
+        margin: 0 auto 18px;
+      }
+      .ring circle {
+        fill: none;
+        stroke-width: 12;
+        transform: rotate(-90deg);
+        transform-origin: center;
+      }
+      .ring .bg {
+        stroke: #eee;
+      }
+      .ring .progress {
+        stroke: #4a7cf0;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.3s linear;
+      }
+      body.break .ring .progress {
+        stroke: #2e9e4f;
+      }
+      #time {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 46px;
+        direction: ltr;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+      .controls button {
+        padding: 10px 20px;
+        border: none;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
+        min-width: 90px;
+      }
+      #startPause {
+        background: #4a7cf0;
+      }
+      #reset {
+        background: #555;
+      }
+      .settings {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        font-size: 13px;
+        color: #555;
+      }
+      .settings label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+      .settings input {
+        width: 56px;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        text-align: center;
+      }
+      #status {
+        margin-top: 16px;
+        color: #666;
+        min-height: 20px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <h1>وقت التركيز</h1>
+      <div class="modes">
+        <button id="modeFocus" class="active">لنركز</button>
+        <button id="modeShort">فسحة صغيرة</button>
+        <button id="modeLong">فسحة كبيرة</button>
+      </div>
+      <div class="ring">
+        <svg width="220" height="220">
+          <circle class="bg" cx="110" cy="110" r="100"></circle>
+          <circle
+            class="progress"
+            id="progress"
+            cx="110"
+            cy="110"
+            r="100"
+          ></circle>
+        </svg>
+        <div id="time">٢٥:٠٠</div>
+      </div>
+      <div class="controls">
+        <button id="startPause">لنبدأ</button>
+        <button id="reset">من جديد</button>
+      </div>
+      <div class="settings">
+        <label
+          >مدة التركيز<input
+            id="focusMin"
+            type="text"
+            inputmode="numeric"
+            maxlength="2"
+            value="٢٥"
+        /></label>
+        <label
+          >مدة الفسحة الصغيرة<input
+            id="shortMin"
+            type="text"
+            inputmode="numeric"
+            maxlength="2"
+            value="٥"
+        /></label>
+        <label
+          >مدة الفسحة الكبيرة<input
+            id="longMin"
+            type="text"
+            inputmode="numeric"
+            maxlength="2"
+            value="١٥"
+        /></label>
+      </div>
+      <p id="status"></p>
+    </main>
+    <script>
+      const timeEl = document.getElementById("time");
+      const progressEl = document.getElementById("progress");
+      const startPauseBtn = document.getElementById("startPause");
+      const resetBtn = document.getElementById("reset");
+      const statusEl = document.getElementById("status");
+
+      const modeButtons = {
+        focus: document.getElementById("modeFocus"),
+        short: document.getElementById("modeShort"),
+        long: document.getElementById("modeLong"),
+      };
+
+      const inputs = {
+        focus: document.getElementById("focusMin"),
+        short: document.getElementById("shortMin"),
+        long: document.getElementById("longMin"),
+      };
+
+      const RADIUS = 100;
+      const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+      progressEl.style.strokeDasharray = CIRCUMFERENCE;
+
+      let mode = "focus";
+      let totalSeconds = 25 * 60;
+      let remaining = totalSeconds;
+      let endTime = 0;
+      let timer = null;
+      let sessionsToday = loadSessions();
+      let sessionsDay = todayKey();
+
+      function toArabicDigits(num) {
+        const digits = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+        return num.toString().replace(/[0-9]/g, function (d) {
+          return digits[+d];
+        });
+      }
+
+      function todayKey() {
+        const d = new Date();
+        const p = (n) => String(n).padStart(2, "0");
+        return (
+          "pomodoro-ar-" +
+          d.getFullYear() +
+          "-" +
+          p(d.getMonth() + 1) +
+          "-" +
+          p(d.getDate())
+        );
+      }
+      function loadSessions() {
+        try {
+          return Number(localStorage.getItem(todayKey()) || 0);
+        } catch (err) {
+          return 0;
+        }
+      }
+      function saveSessions() {
+        try {
+          localStorage.setItem(todayKey(), sessionsToday);
+        } catch (err) {}
+      }
+      function toLatinDigits(str) {
+        return String(str).replace(/[٠-٩]/g, function (d) {
+          return "٠١٢٣٤٥٦٧٨٩".indexOf(d);
+        });
+      }
+      const LIMITS = { focus: 90, short: 30, long: 60 };
+      function minutesFor(m) {
+        const value = parseInt(toLatinDigits(inputs[m].value), 10);
+        if (!(value > 0)) return 1;
+        return Math.min(value, LIMITS[m]);
+      }
+      function format(sec) {
+        const m = String(Math.floor(sec / 60)).padStart(2, "0");
+        const s = String(sec % 60).padStart(2, "0");
+        return toArabicDigits(m + ":" + s);
+      }
+      function draw() {
+        timeEl.textContent = format(remaining);
+        const fraction = totalSeconds ? remaining / totalSeconds : 0;
+        progressEl.style.strokeDashoffset = CIRCUMFERENCE * (1 - fraction);
+        document.title =
+          format(remaining) +
+          " - " +
+          (mode === "focus" ? "وقت التركيز" : "وقت الفسحة");
+      }
+      function updateStatus(text) {
+        statusEl.textContent =
+          text || "الفترات المنجزة اليوم: " + toArabicDigits(sessionsToday);
+      }
+      function stop() {
+        clearInterval(timer);
+        timer = null;
+        startPauseBtn.textContent = "لنبدأ";
+      }
+      function setMode(newMode) {
+        stop();
+        mode = newMode;
+        totalSeconds = minutesFor(mode) * 60;
+        remaining = totalSeconds;
+        Object.keys(modeButtons).forEach((k) =>
+          modeButtons[k].classList.toggle("active", k === mode),
+        );
+        document.body.classList.toggle("break", mode !== "focus");
+        updateStatus();
+        draw();
+      }
+      let audioCtx = null;
+      function unlockAudio() {
+        try {
+          audioCtx =
+            audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === "suspended") audioCtx.resume();
+        } catch (err) {}
+      }
+      function beep() {
+        try {
+          unlockAudio();
+          const osc = audioCtx.createOscillator();
+          osc.frequency.value = 880;
+          osc.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.4);
+        } catch (err) {}
+      }
+      function finish() {
+        stop();
+        beep();
+
+        if (mode === "focus") {
+          if (sessionsDay !== todayKey()) {
+            sessionsDay = todayKey();
+            sessionsToday = 0;
+          }
+          sessionsToday++;
+          saveSessions();
+          const next = sessionsToday % 4 === 0 ? "long" : "short";
+          setMode(next);
+          updateStatus(
+            "أحسنت! إنه وقت الفسحة " +
+              (next === "long" ? "الكبيرة." : "الصغيرة."),
+          );
+        } else {
+          setMode("focus");
+          updateStatus("انتهت الفسحة، مستعد للجد؟");
+        }
+      }
+      function tick() {
+        remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+        draw();
+        if (remaining <= 0) finish();
+      }
+
+      startPauseBtn.addEventListener("click", () => {
+        if (timer) {
+          stop();
+          startPauseBtn.textContent = "متابعة";
+        } else {
+          unlockAudio();
+          endTime = Date.now() + remaining * 1000;
+          timer = setInterval(tick, 250);
+          startPauseBtn.textContent = "إيقاف مؤقت";
+        }
+      });
+
+      resetBtn.addEventListener("click", () => setMode(mode));
+      modeButtons.focus.addEventListener("click", () => setMode("focus"));
+      modeButtons.short.addEventListener("click", () => setMode("short"));
+      modeButtons.long.addEventListener("click", () => setMode("long"));
+
+      Object.keys(inputs).forEach((k) => {
+        inputs[k].addEventListener("input", () => {
+          const clean = toLatinDigits(inputs[k].value).replace(/[^0-9]/g, "");
+          inputs[k].value = toArabicDigits(clean);
+        });
+        inputs[k].addEventListener("change", () => {
+          inputs[k].value = toArabicDigits(minutesFor(k));
+          if (k === mode && !timer) {
+            setMode(mode);
+          }
+        });
+      });
+
+      setMode("focus");
+    </script>
+  </body>
+</html>

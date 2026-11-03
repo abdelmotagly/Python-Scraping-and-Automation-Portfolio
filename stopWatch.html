@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stopwatch</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: sans-serif;
+        background: #f0f2f5;
+        display: flex;
+        justify-content: center;
+        padding: 60px 12px 20px;
+        margin: 0;
+      }
+      .box {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 340px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      #display {
+        font-size: 44px;
+        font-variant-numeric: tabular-nums;
+        margin: 20px 0;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+      button {
+        padding: 10px 16px;
+        border: none;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
+      }
+      #startStop {
+        background: #2e9e4f;
+      }
+      #startStop.running {
+        background: #e55;
+      }
+      #lap {
+        background: #4a7cf0;
+      }
+      #reset {
+        background: #555;
+      }
+      #hint {
+        margin: 16px 0 0;
+        font-size: 12px;
+        color: #888;
+      }
+      ol {
+        text-align: start;
+        padding-inline-start: 28px;
+        max-height: 180px;
+        overflow-y: auto;
+        margin-top: 6px;
+      }
+      li {
+        padding: 4px 0;
+        font-variant-numeric: tabular-nums;
+      }
+      li .total {
+        color: #888;
+        margin-inline-start: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="box">
+      <h1>Stopwatch</h1>
+      <div id="display" aria-live="off">00:00.00</div>
+      <div class="controls">
+        <button id="startStop">Start</button>
+        <button id="lap">Lap</button>
+        <button id="reset">Reset</button>
+      </div>
+      <p id="hint" hidden>Lap time &middot; Total</p>
+      <ol id="laps" reversed></ol>
+    </main>
+    <script>
+      const display = document.getElementById("display");
+      const startStopBtn = document.getElementById("startStop");
+      const lapBtn = document.getElementById("lap");
+      const resetBtn = document.getElementById("reset");
+      const lapsEl = document.getElementById("laps");
+      const hintEl = document.getElementById("hint");
+
+      let startTime = 0;
+      let elapsed = 0;
+      let frameId = null;
+      let lastLap = 0;
+
+      function format(ms) {
+        const p = (n) => String(n).padStart(2, "0");
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor(totalSeconds / 60) % 60;
+        const seconds = totalSeconds % 60;
+        const hundredths = Math.floor(ms / 10) % 100;
+        return (
+          (hours ? hours + ":" : "") +
+          p(minutes) +
+          ":" +
+          p(seconds) +
+          "." +
+          p(hundredths)
+        );
+      }
+
+      function frame() {
+        elapsed = Date.now() - startTime;
+        display.textContent = format(elapsed);
+        frameId = requestAnimationFrame(frame);
+      }
+
+      startStopBtn.addEventListener("click", () => {
+        if (frameId !== null) {
+          cancelAnimationFrame(frameId);
+          frameId = null;
+          elapsed = Date.now() - startTime;
+          display.textContent = format(elapsed);
+          startStopBtn.textContent = "Start";
+          startStopBtn.classList.remove("running");
+        } else {
+          startTime = Date.now() - elapsed;
+          frameId = requestAnimationFrame(frame);
+          startStopBtn.textContent = "Stop";
+          startStopBtn.classList.add("running");
+        }
+      });
+
+      lapBtn.addEventListener("click", () => {
+        if (frameId === null) return;
+        const split = elapsed - lastLap;
+        lastLap = elapsed;
+        const li = document.createElement("li");
+        li.textContent = format(split);
+        const total = document.createElement("span");
+        total.className = "total";
+        total.textContent = format(elapsed);
+        li.appendChild(total);
+        lapsEl.prepend(li);
+        hintEl.hidden = false;
+      });
+
+      resetBtn.addEventListener("click", () => {
+        if (frameId !== null) cancelAnimationFrame(frameId);
+        frameId = null;
+        elapsed = 0;
+        lastLap = 0;
+        display.textContent = "00:00.00";
+        startStopBtn.textContent = "Start";
+        startStopBtn.classList.remove("running");
+        lapsEl.innerHTML = "";
+        hintEl.hidden = true;
+      });
+    </script>
+  </body>
+</html>

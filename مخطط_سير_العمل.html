@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kanban Board</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      :root {
+        --blue: #4a7cf0;
+        --bg: #f0f2f5;
+        --text: #1d2129;
+        --col: #e4e7ec;
+        --col-over: #d3dcf7;
+        --card: #ffffff;
+        --muted: #666;
+        --border: #ccc;
+        --input: #ffffff;
+        --btn: #333;
+        --cancel: #ddd;
+        --count-bg: #fff;
+        --dash: #aab;
+        --hover: rgba(255, 255, 255, 0.5);
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        color-scheme: light;
+      }
+      :root[data-theme="dark"] {
+        --bg: #14171c;
+        --text: #e6e8ec;
+        --col: #1f242c;
+        --col-over: #2a3550;
+        --card: #2a303a;
+        --muted: #9aa3b2;
+        --border: #444c59;
+        --input: #1b2027;
+        --btn: #4a5262;
+        --cancel: #3a424f;
+        --count-bg: #2a303a;
+        --dash: #566070;
+        --hover: rgba(255, 255, 255, 0.06);
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        color-scheme: dark;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 20px 12px;
+      }
+      header {
+        max-width: 1000px;
+        margin: 0 auto 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      h1 {
+        margin: 0;
+        font-size: 24px;
+      }
+      .tools {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .tools input,
+      .tools select {
+        padding: 8px;
+        border: 1px solid var(--border);
+        background: var(--input);
+        color: var(--text);
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+      }
+      .tools button {
+        padding: 8px 12px;
+        border: none;
+        background: var(--btn);
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .tools button.lang {
+        background: var(--blue);
+      }
+      .board {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+      @media (max-width: 720px) {
+        .board {
+          grid-template-columns: 1fr;
+        }
+      }
+      .column {
+        background: var(--col);
+        border-radius: 12px;
+        padding: 12px;
+        min-height: 260px;
+        transition: background 0.2s;
+      }
+      .column.over {
+        background: var(--col-over);
+      }
+      .column h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .count {
+        background: var(--count-bg);
+        border-radius: 12px;
+        padding: 2px 9px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .cards {
+        min-height: 160px;
+      }
+      .card {
+        background: var(--card);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 8px;
+        box-shadow: var(--shadow);
+        cursor: grab;
+        border-inline-start: 5px solid var(--blue);
+      }
+      .card.dragging {
+        opacity: 0.4;
+      }
+      .card.hidden {
+        display: none;
+      }
+      .card .title {
+        word-break: break-word;
+      }
+      .card .meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .card .btns {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .card .act:disabled {
+        opacity: 0.25;
+        cursor: default;
+      }
+      .card .del,
+      .card .act {
+        border: none;
+        background: none;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 16px;
+      }
+      .card .act {
+        padding: 2px 6px;
+        color: var(--text);
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      .card .edit-input {
+        width: 100%;
+        padding: 4px;
+        font-size: 14px;
+        font-family: inherit;
+        background: var(--input);
+        color: var(--text);
+        border: 1px solid var(--blue);
+        border-radius: 4px;
+      }
+      .add {
+        margin-top: 6px;
+        width: 100%;
+        padding: 8px;
+        border: 2px dashed var(--dash);
+        background: none;
+        border-radius: 8px;
+        cursor: pointer;
+        color: var(--muted);
+        font-family: inherit;
+      }
+      .add:hover {
+        background: var(--hover);
+      }
+      dialog {
+        background: var(--card);
+        color: var(--text);
+        border: none;
+        border-radius: 12px;
+        padding: 20px;
+        width: 320px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+        font-family: inherit;
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.35);
+      }
+      dialog h3 {
+        margin-top: 0;
+      }
+      dialog input,
+      dialog select {
+        width: 100%;
+        padding: 9px;
+        margin-bottom: 10px;
+        background: var(--input);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+      }
+      dialog .actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      dialog button {
+        padding: 8px 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      dialog .save {
+        background: var(--blue);
+        color: white;
+      }
+      dialog .cancel {
+        background: var(--cancel);
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="appTitle"></h1>
+      <div class="tools">
+        <input id="search" type="search" />
+        <select id="labelFilter"></select>
+        <button id="clearDone"></button>
+        <button id="themeBtn" class="theme" type="button"></button>
+        <button id="langBtn" class="lang" type="button"></button>
+      </div>
+    </header>
+    <main class="board" id="board"></main>
+    <dialog id="dialog">
+      <form method="dialog" id="cardForm">
+        <h3 id="dialogTitle"></h3>
+        <input id="cardTitle" required maxlength="120" />
+        <select id="cardLabel"></select>
+        <div class="actions">
+          <button type="button" class="cancel" id="cancelBtn"></button>
+          <button type="submit" class="save" id="saveBtn"></button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="confirmDialog">
+      <p id="confirmMsg"></p>
+      <div class="actions">
+        <button type="button" class="cancel" id="confirmNo"></button>
+        <button
+          type="button"
+          class="save"
+          id="confirmYes"
+          style="background: #e55"
+        ></button>
+      </div>
+    </dialog>
+    <script>
+      const I18N = {
+        en: {
+          dir: "ltr",
+          pageTitle: "Kanban Board",
+          search: "Search cards...",
+          allLabels: "All labels",
+          clearDone: "Clear Done",
+          switchLang: "اللغة العربية",
+          themeToLight: "Light ☀",
+          themeToDark: "Dark ☾",
+          todo: "To Do",
+          doing: "In Progress",
+          done: "Done",
+          blue: "Blue",
+          green: "Green",
+          orange: "Orange",
+          purple: "Purple",
+          red: "Red",
+          addCard: "+ Add card",
+          newCard: "New card",
+          cardTitle: "Card title",
+          cancel: "Cancel",
+          add: "Add card",
+          deleteCard: "Delete card",
+          confirmClear: "Delete all cards in Done?",
+          confirmYes: "Delete",
+          movePrev: "Move to previous column",
+          moveNext: "Move to next column",
+          editCard: "Edit card",
+        },
+        ar: {
+          dir: "rtl",
+          pageTitle: "مخطط سير المهام",
+          search: "ابحث عن مهمة...",
+          allLabels: "كل التصنيفات",
+          clearDone: "إزالة المهام المكتملة",
+          switchLang: "English",
+          themeToLight: "النهار ☀",
+          themeToDark: "الليل ☾",
+          todo: "لم تبدأ بعد",
+          doing: "جاري العمل عليها ...",
+          done: "تمت بحمد الله ^_^",
+          blue: "زرقاء",
+          green: "خضراء",
+          orange: "برتقالية",
+          purple: "بنفسجية",
+          red: "حمراء",
+          addCard: "+ إضافة مهمة",
+          newCard: "مهمة جديدة",
+          cardTitle: "عنوان المهمة",
+          cancel: "إلغاء",
+          add: "إضافة مهمة",
+          deleteCard: "حذف المهمة",
+          confirmClear: "هل تريد إزالة جميع المهام المكتملة؟",
+          confirmYes: "حذف",
+          movePrev: "نقل إلى العمود السابق",
+          moveNext: "نقل إلى العمود التالي",
+          editCard: "تعديل المهمة",
+        },
+      };
+
+      const SAMPLES = {
+        sample1: {
+          en: "Try dragging me to another column",
+          ar: "جرب سحبي إلى عمود آخر",
+        },
+        sample2: {
+          en: "Double-click a title to edit it",
+          ar: "اضغط مرتين متتاليتين على العنوان لتغييره",
+        },
+        sample3: {
+          en: "Use search and label filters",
+          ar: "استخدم ميزة البحث والفلترة",
+        },
+      };
+
+      const COLUMNS = ["todo", "doing", "done"];
+      const LABELS = ["blue", "green", "orange", "purple", "red"];
+      const COLORS = {
+        blue: "#4a7cf0",
+        green: "#2e9e4f",
+        orange: "#f0a030",
+        purple: "#8a5cf0",
+        red: "#e55",
+      };
+
+      let lang = "en";
+      try {
+        lang =
+          localStorage.getItem("kanbanLang") ||
+          ((navigator.language || "").startsWith("ar") ? "ar" : "en");
+      } catch (e) {}
+      if (!I18N[lang]) lang = "en";
+      const t = (k) => I18N[lang][k];
+
+      const boardEl = document.getElementById("board");
+      const searchEl = document.getElementById("search");
+      const labelFilterEl = document.getElementById("labelFilter");
+      const dialog = document.getElementById("dialog");
+      const cardForm = document.getElementById("cardForm");
+      const cardTitle = document.getElementById("cardTitle");
+      const cardLabel = document.getElementById("cardLabel");
+      const cancelBtn = document.getElementById("cancelBtn");
+      const clearDoneBtn = document.getElementById("clearDone");
+      const langBtn = document.getElementById("langBtn");
+      const themeBtn = document.getElementById("themeBtn");
+
+      let theme = null;
+      try {
+        theme = localStorage.getItem("kanbanTheme");
+      } catch (e) {}
+      if (theme !== "light" && theme !== "dark") {
+        theme =
+          window.matchMedia &&
+          matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+      }
+      document.documentElement.dataset.theme = theme;
+
+      let cards = null;
+      try {
+        cards = JSON.parse(localStorage.getItem("kanbanCards") || "null");
+      } catch (e) {}
+      if (!Array.isArray(cards))
+        cards = [
+          {
+            id: 1,
+            titles: { ...SAMPLES.sample1 },
+            label: "blue",
+            column: "todo",
+          },
+          {
+            id: 2,
+            titles: { ...SAMPLES.sample2 },
+            label: "orange",
+            column: "todo",
+          },
+          {
+            id: 3,
+            titles: { ...SAMPLES.sample3 },
+            label: "purple",
+            column: "doing",
+          },
+        ];
+
+      cards.forEach((c) => {
+        if (c.titles) return;
+        if (c.key && SAMPLES[c.key]) {
+          c.titles = { ...SAMPLES[c.key] };
+        } else {
+          const match = Object.values(SAMPLES).find(
+            (s) => s.en === c.title || s.ar === c.title,
+          );
+          c.titles = match ? { ...match } : { [lang]: c.title || "" };
+        }
+        delete c.key;
+        delete c.title;
+      });
+
+      let targetColumn = "todo";
+      let draggedId = null;
+
+      function save() {
+        try {
+          localStorage.setItem("kanbanCards", JSON.stringify(cards));
+        } catch (e) {}
+      }
+
+      function cardText(card) {
+        return card.titles[lang] || card.titles.en || card.titles.ar || "";
+      }
+
+      function fillLabelOptions(select, withAll) {
+        const current = select.value;
+        select.innerHTML = "";
+        if (withAll) {
+          const o = document.createElement("option");
+          o.value = "all";
+          o.textContent = t("allLabels");
+          select.appendChild(o);
+        }
+        LABELS.forEach((l) => {
+          const o = document.createElement("option");
+          o.value = l;
+          o.textContent = t(l);
+          select.appendChild(o);
+        });
+        select.value = current || (withAll ? "all" : "blue");
+      }
+
+      function applyLanguage() {
+        document.documentElement.lang = lang;
+        document.documentElement.dir = t("dir");
+        document.title = t("pageTitle");
+        document.getElementById("appTitle").textContent = t("pageTitle");
+        searchEl.placeholder = t("search");
+        clearDoneBtn.textContent = t("clearDone");
+        langBtn.textContent = t("switchLang");
+        themeBtn.textContent =
+          theme === "dark" ? t("themeToLight") : t("themeToDark");
+        document.getElementById("dialogTitle").textContent = t("newCard");
+        cardTitle.placeholder = t("cardTitle");
+        cancelBtn.textContent = t("cancel");
+        document.getElementById("saveBtn").textContent = t("add");
+        fillLabelOptions(labelFilterEl, true);
+        fillLabelOptions(cardLabel, false);
+        render();
+      }
+
+      function matchesFilters(card) {
+        const query = searchEl.value.trim().toLowerCase();
+        const label = labelFilterEl.value;
+        const textOk = !query || cardText(card).toLowerCase().includes(query);
+        const labelOk = label === "all" || card.label === label;
+        return textOk && labelOk;
+      }
+
+      function buildCard(card) {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.draggable = true;
+        el.dataset.id = card.id;
+        el.style.borderInlineStartColor = COLORS[card.label];
+        if (!matchesFilters(card)) el.classList.add("hidden");
+
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = cardText(card);
+        title.addEventListener("dblclick", () => startEdit(card, title));
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const labelText = document.createElement("span");
+        labelText.textContent = t(card.label);
+        const del = document.createElement("button");
+        del.className = "del";
+        del.textContent = "\u00d7";
+        del.title = t("deleteCard");
+        del.addEventListener("click", () => {
+          cards = cards.filter((c) => c.id !== card.id);
+          save();
+          render();
+        });
+        const btns = document.createElement("div");
+        btns.className = "btns";
+        const idx = COLUMNS.indexOf(card.column);
+        const rtl = t("dir") === "rtl";
+        const mk = (text, label, onClick, disabled) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "act";
+          b.textContent = text;
+          b.title = label;
+          b.setAttribute("aria-label", label);
+          b.disabled = disabled;
+          b.addEventListener("click", onClick);
+          return b;
+        };
+        btns.appendChild(
+          mk(rtl ? "\u2192" : "\u2190", t("movePrev"), () => moveCard(card, idx - 1), idx <= 0),
+        );
+        btns.appendChild(
+          mk(
+            rtl ? "\u2190" : "\u2192",
+            t("moveNext"),
+            () => moveCard(card, idx + 1),
+            idx >= COLUMNS.length - 1,
+          ),
+        );
+        btns.appendChild(mk("\u270e", t("editCard"), () => startEdit(card, title), false));
+        del.setAttribute("aria-label", t("deleteCard"));
+        btns.appendChild(del);
+        meta.appendChild(labelText);
+        meta.appendChild(btns);
+
+        el.appendChild(title);
+        el.appendChild(meta);
+
+        el.addEventListener("dragstart", (e) => {
+          draggedId = card.id;
+          el.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(card.id));
+        });
+        el.addEventListener("dragend", () => {
+          el.classList.remove("dragging");
+          document
+            .querySelectorAll(".column")
+            .forEach((c) => c.classList.remove("over"));
+        });
+        return el;
+      }
+
+      function moveCard(card, colIndex) {
+        if (colIndex < 0 || colIndex >= COLUMNS.length) return;
+        card.column = COLUMNS[colIndex];
+        cards = cards.filter((c) => c.id !== card.id);
+        cards.push(card);
+        save();
+        render();
+      }
+
+      function startEdit(card, titleEl) {
+        const input = document.createElement("input");
+        input.className = "edit-input";
+        input.value = cardText(card);
+        titleEl.replaceWith(input);
+        input.focus();
+        input.select();
+
+        let finished = false;
+        function finish(saveIt) {
+          if (finished) return;
+          finished = true;
+          const value = input.value.trim();
+          if (saveIt && value && value !== cardText(card)) {
+            card.titles[lang] = value;
+            save();
+          }
+          render();
+        }
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") finish(true);
+          if (e.key === "Escape") finish(false);
+        });
+        input.addEventListener("blur", () => finish(true));
+      }
+
+      function render() {
+        boardEl.innerHTML = "";
+        COLUMNS.forEach((colId) => {
+          const colCards = cards.filter((c) => c.column === colId);
+
+          const column = document.createElement("section");
+          column.className = "column";
+          column.dataset.id = colId;
+
+          const h2 = document.createElement("h2");
+          const name = document.createElement("span");
+          name.textContent = t(colId);
+          const count = document.createElement("span");
+          count.className = "count";
+          const shown = colCards.filter(matchesFilters).length;
+          count.textContent =
+            shown === colCards.length
+              ? colCards.length
+              : shown + "/" + colCards.length;
+          h2.appendChild(name);
+          h2.appendChild(count);
+
+          const list = document.createElement("div");
+          list.className = "cards";
+          colCards.forEach((card) => list.appendChild(buildCard(card)));
+
+          const addBtn = document.createElement("button");
+          addBtn.className = "add";
+          addBtn.textContent = t("addCard");
+          addBtn.addEventListener("click", () => openDialog(colId));
+
+          column.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            column.classList.add("over");
+          });
+          column.addEventListener("dragleave", (e) => {
+            if (!column.contains(e.relatedTarget))
+              column.classList.remove("over");
+          });
+          column.addEventListener("drop", (e) => {
+            e.preventDefault();
+            column.classList.remove("over");
+            const card = cards.find((c) => c.id === draggedId);
+            if (!card) return;
+            card.column = colId;
+            const afterEl = getDropTarget(list, e.clientY);
+            cards = cards.filter((c) => c.id !== card.id);
+            if (afterEl) {
+              const index = cards.findIndex(
+                (c) => c.id === Number(afterEl.dataset.id),
+              );
+              cards.splice(index, 0, card);
+            } else {
+              cards.push(card);
+            }
+            draggedId = null;
+            save();
+            render();
+          });
+
+          column.appendChild(h2);
+          column.appendChild(list);
+          column.appendChild(addBtn);
+          boardEl.appendChild(column);
+        });
+      }
+
+      function getDropTarget(list, y) {
+        const others = [...list.querySelectorAll(".card:not(.dragging)")];
+        return others.find((el) => {
+          const box = el.getBoundingClientRect();
+          return y < box.top + box.height / 2;
+        });
+      }
+
+      function openDialog(columnId) {
+        targetColumn = columnId;
+        cardTitle.value = "";
+        cardLabel.value = "blue";
+        dialog.showModal();
+        cardTitle.focus();
+      }
+
+      cardForm.addEventListener("submit", () => {
+        const title = cardTitle.value.trim();
+        if (!title) return;
+        cards.push({
+          id: Date.now(),
+          titles: { [lang]: title },
+          label: cardLabel.value,
+          column: targetColumn,
+        });
+        save();
+        render();
+      });
+
+      cancelBtn.addEventListener("click", () => dialog.close());
+      searchEl.addEventListener("input", render);
+      labelFilterEl.addEventListener("change", render);
+
+      clearDoneBtn.addEventListener("click", () => {
+        if (!cards.some((c) => c.column === "done")) return;
+        document.getElementById("confirmMsg").textContent = t("confirmClear");
+        document.getElementById("confirmYes").textContent = t("confirmYes");
+        document.getElementById("confirmNo").textContent = t("cancel");
+        document.getElementById("confirmDialog").showModal();
+      });
+      document.getElementById("confirmNo").addEventListener("click", () => {
+        document.getElementById("confirmDialog").close();
+      });
+      document.getElementById("confirmYes").addEventListener("click", () => {
+        cards = cards.filter((c) => c.column !== "done");
+        save();
+        render();
+        document.getElementById("confirmDialog").close();
+      });
+
+      langBtn.addEventListener("click", () => {
+        lang = lang === "en" ? "ar" : "en";
+        try {
+          localStorage.setItem("kanbanLang", lang);
+        } catch (e) {}
+        applyLanguage();
+      });
+
+      themeBtn.addEventListener("click", () => {
+        theme = theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+        try {
+          localStorage.setItem("kanbanTheme", theme);
+        } catch (e) {}
+        themeBtn.textContent =
+          theme === "dark" ? t("themeToLight") : t("themeToDark");
+      });
+
+      applyLanguage();
+    </script>
+  </body>
+</html>
