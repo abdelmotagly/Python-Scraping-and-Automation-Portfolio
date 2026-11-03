@@ -10,13 +10,13 @@ Here is a tracked list of my completed professional programming modules and tech
 
 | Certificate Title | Issue Date | Verification ID | Live Certificate Preview |
 | :--- | :--- | :--- | :---: |
-| 🐍 **Python Fundamentals** | Oct 18, 2026 | `1Mbefg-python-ZP9neU` | [![View Certificate](./python_fundamentals.png)](./python_fundamentals.png) |
-| ⚙️ **C++ Fundamentals** | Oct 12, 2026 | `1Mbefg-cpp-GqRKK4` | [![View Certificate](./cpp_fundamentals.png)](./cpp_fundamentals.png) |
-| 🌐 **HTML JavaScript in Action** | Oct 08, 2026 | `1Mbefg-html-bJ2T8b` | [![View Certificate](./html_javascript.png)](./html_javascript.png) |
-| 🎨 **HTML Practical Frontend** | Oct 04, 2026 | `1Mbefg-html-2sLKgb` | [![View Certificate](./html_frontend.png)](./html_frontend.png) |
-| 📐 **HTML CSS Mastery** | Oct 01, 2026 | `1Mbefg-html-MCa2tZ` | [![View Certificate](./html_css_mastery.png)](./html_css_mastery.png) |
-| 🖌️ **HTML Styling with CSS** | Sep 29, 2026 | `1Mbefg-html-P457Ik` | [![View Certificate](./html_styling.png)](./html_styling.png) |
-| 🧩 **HTML Fundamentals** | Sep 22, 2026 | `1Mbefg-html-mQsrS3` | [![View Certificate](./html_fundamentals.png)](./html_fundamentals.png) |
+| 🐍 **Python Fundamentals** | Oct 18, 2026 | `1Mbefg-python-ZP9neU` | [👁️ View Certificate](./python_fundamentals.png) |
+| ⚙️ **C++ Fundamentals** | Oct 12, 2026 | `1Mbefg-cpp-GqRKK4` | [👁️ View Certificate](./cpp_fundamentals.png) |
+| 🌐 **HTML JavaScript in Action** | Oct 08, 2026 | `1Mbefg-html-bJ2T8b` | [👁️ View Certificate](./html_javascript.png) |
+| 🎨 **HTML Practical Frontend** | Oct 04, 2026 | `1Mbefg-html-2sLKgb` | [👁️ View Certificate](./html_frontend.png) |
+| 📐 **HTML CSS Mastery** | Oct 01, 2026 | `1Mbefg-html-MCa2tZ` | [👁️ View Certificate](./html_css_mastery.png) |
+| 🖌️ **HTML Styling with CSS** | Sep 29, 2026 | `1Mbefg-html-P457Ik` | [👁️ View Certificate](./html_styling.png) |
+| 🧩 **HTML Fundamentals** | Sep 22, 2026 | `1Mbefg-html-mQsrS3` | [👁️ View Certificate](./html_fundamentals.png) |
 
 ---
 
